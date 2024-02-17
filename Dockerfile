@@ -5,29 +5,35 @@
 FROM python:3.11
 SHELL ["/bin/bash", "--login", "-c"]
 
+WORKDIR /tcd
+
 # Just needed for all things python (note this is setting an env variable)
 ENV PYTHONUNBUFFERED 1
 # Needed for correct settings input
 ENV IN_DOCKER 1
+# Set git to use HTTPS (SSH is often blocked by firewalls)
+RUN git config --global url."https://".insteadOf git://
 
 # Setup Node/NPM
 RUN apt-get update
 RUN apt-get install -y curl nginx
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-
-# Copy all our files into the baseimage and cd to that directory
-WORKDIR /tcd
-COPY . /tcd/
-
 RUN nvm install && nvm use
-
-# Set git to use HTTPS (SSH is often blocked by firewalls)
-RUN git config --global url."https://".insteadOf git://
 
 # Install our node/python requirements
 RUN pip install pipenv
+ADD Pipfile Pipfile.lock /tcd/
 RUN pipenv install --system --deploy
-RUN npm ci --only=production
+ADD package.json package-lock.json /tcd/
+RUN npm ci --omit=dev
+RUN npx update-browserslist-db@latest
+
+# Copy all our files
+ADD babel.config.js crowdin.yml ProcfileMulti.docker render.yaml vue.config.js /tcd/
+ADD bin/ /tcd/bin/
+ADD config/ /tcd/config/
+ADD data/ /tcd/data/
+ADD tabbycat/ /tcd/tabbycat/
 
 # Compile all the static files
 RUN npm run build
