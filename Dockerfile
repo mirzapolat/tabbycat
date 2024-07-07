@@ -3,7 +3,6 @@
 
 # Grab a python image
 FROM python:3.11
-SHELL ["/bin/bash", "--login", "-c"]
 
 WORKDIR /tcd
 
